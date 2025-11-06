@@ -197,12 +197,4 @@ These give interpretability and benchmark metrics.
 
 ---
 
-##  10. Next Steps
-
-1. Load dataset in a Jupyter notebook.
-2. Parse timestamps → derive `delay_minutes` and `delayed_flag`.
-3. Perform EDA: histogram of delays, per driver/country.
-4. Train baseline models → evaluate with KPIs above.
-5. Build Streamlit dashboard with KPIs and route metrics.
-6. Write final report (problem → model → impact).
 
