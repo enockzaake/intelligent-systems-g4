@@ -1,5 +1,44 @@
+import sys
+from pathlib import Path
+
+from train import ModelTrainer
+
+
 def main():
-    print("Hello from core!")
+    print("\n" + "=" * 80)
+    print("AI-DRIVEN ROUTE OPTIMIZATION AND DELAY PREDICTION SYSTEM")
+    print("=" * 80)
+    
+    data_path = Path("data/cleaned_delivery_data.csv")
+    
+    if not data_path.exists():
+        print(f"\nError: Data file not found at {data_path}")
+        print("Please ensure the cleaned data file exists.")
+        sys.exit(1)
+    
+    output_dir = Path("outputs")
+    
+    trainer = ModelTrainer(str(data_path), output_dir=str(output_dir))
+    
+    trainer.preprocess_data()
+    
+    trainer.get_summary_statistics()
+    
+    trainer.train_all_models(
+        lstm_epochs=50,
+        lstm_batch_size=64,
+        lstm_sequence_length=10
+    )
+    
+    print("\n" + "=" * 80)
+    print("PIPELINE EXECUTION COMPLETE")
+    print("=" * 80)
+    print(f"\nAll outputs are available in: {output_dir.absolute()}")
+    print("\nNext steps:")
+    print("  1. Review evaluation results in outputs/results/")
+    print("  2. Check feature importance plots")
+    print("  3. Compare model performance metrics")
+    print("  4. Use trained models for predictions via API")
 
 
 if __name__ == "__main__":
