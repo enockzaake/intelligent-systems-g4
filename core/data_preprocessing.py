@@ -32,19 +32,40 @@ class DataPreprocessor:
     def create_features(self, df):
         df = df.copy()
         
+        # Helper function to safely parse time strings
+        def safe_parse_time(series):
+            """Parse time strings, handling various formats"""
+            # If already datetime, return as is
+            if pd.api.types.is_datetime64_any_dtype(series):
+                return series
+            
+            # Try parsing with explicit format for HH:MM or H:MM
+            try:
+                return pd.to_datetime(series, format='%H:%M', errors='coerce')
+            except:
+                # Fallback to general parsing
+                return pd.to_datetime(series, errors='coerce')
+        
         if 'actual_arrival_delay' in df.columns and 'delay_flag' in df.columns:
             df["delay_minutes"] = np.maximum(0, df["actual_arrival_delay"])
             df["delayed_flag"] = df["delay_flag"]
         else:
+            # Parse time columns safely
+            arrived_time = safe_parse_time(df["arrived_time"])
+            latest_time = safe_parse_time(df["latest_time"])
+            
             df["delay_minutes"] = np.maximum(
                 0, 
-                (pd.to_datetime(df["arrived_time"]) - pd.to_datetime(df["latest_time"])).dt.total_seconds() / 60
+                (arrived_time - latest_time).dt.total_seconds() / 60
             )
             df["delayed_flag"] = (df["delay_minutes"] > 0).astype(int)
         
-        df["hour_of_arrival"] = pd.to_datetime(df["arrived_time"]).dt.hour
+        # Parse and extract hour
+        df["hour_of_arrival"] = safe_parse_time(df["arrived_time"]).dt.hour
+        
+        # Calculate time window length
         df["time_window_length"] = (
-            pd.to_datetime(df["latest_time"]) - pd.to_datetime(df["earliest_time"])
+            safe_parse_time(df["latest_time"]) - safe_parse_time(df["earliest_time"])
         ).dt.total_seconds() / 60
         
         df["delay_ratio"] = df["delay_minutes"] / (df["time_window_length"] + 1e-6)

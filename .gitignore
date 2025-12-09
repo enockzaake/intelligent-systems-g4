@@ -1,0 +1,14 @@
+*.md
+*.sh
+*.bat
+*.csv
+*.json
+*.txt
+*.log
+*.err
+*.out
+*.log.gz
+*.log.bz2
+*.log.xz
+*.log.lzma
+*.log.zstd

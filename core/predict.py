@@ -127,7 +127,53 @@ class ModelPredictor:
         predictions = model.predict(X)
         return predictions
     
-    def predict_route_delays(self, df):
+    def classify_risk(self, probability):
+        """Classify delay risk based on probability"""
+        if probability > 0.7:
+            return "HIGH"
+        elif probability > 0.4:
+            return "MEDIUM"
+        else:
+            return "LOW"
+    
+    def get_feature_importance(self, model_name="random_forest_classifier"):
+        """Get feature importance from the model"""
+        if model_name not in self.models:
+            return None
+        
+        model = self.models[model_name]
+        if hasattr(model, 'get_feature_importance'):
+            # Pass feature_names to the method
+            if self.preprocessor.feature_columns is not None:
+                importance = model.get_feature_importance(self.preprocessor.feature_columns)
+                if importance is not None:
+                    # importance is already a list of tuples (name, value) sorted by importance
+                    feature_importance = dict(importance)
+                    return feature_importance
+        return None
+    
+    def get_contributing_factors(self, df_row, feature_importance, top_n=5):
+        """Get top contributing factors for a prediction"""
+        if feature_importance is None:
+            return []
+        
+        # Get top N most important features
+        top_features = list(feature_importance.keys())[:top_n]
+        
+        contributing_factors = []
+        for feature in top_features:
+            if feature in df_row:
+                value = df_row[feature]
+                importance = feature_importance[feature]
+                contributing_factors.append({
+                    "feature": feature,
+                    "value": float(value) if not pd.isna(value) else 0.0,
+                    "importance": float(importance)
+                })
+        
+        return contributing_factors
+    
+    def predict_route_delays(self, df, include_factors=False):
         df_processed = self.preprocess_data(df)
         
         clf_predictions, clf_probabilities = self.predict_classification(
@@ -142,6 +188,18 @@ class ModelPredictor:
         results["delayed_flag_pred"] = clf_predictions
         results["delay_probability"] = clf_probabilities
         results["delay_minutes_pred"] = reg_predictions
+        
+        # Add risk classification
+        results["risk_level"] = results["delay_probability"].apply(self.classify_risk)
+        
+        # Add contributing factors if requested
+        if include_factors:
+            feature_importance = self.get_feature_importance("random_forest_classifier")
+            if feature_importance is not None:
+                results["contributing_factors"] = df_processed.apply(
+                    lambda row: self.get_contributing_factors(row, feature_importance, top_n=3),
+                    axis=1
+                )
         
         return results
     
