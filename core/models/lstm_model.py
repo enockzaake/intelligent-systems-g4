@@ -42,11 +42,9 @@ class LSTMNetwork(nn.Module):
         self.fc1 = nn.Linear(hidden_size, 32)
         self.relu = nn.ReLU()
         
-        if task == "classification":
-            self.fc2 = nn.Linear(32, 1)
-            self.sigmoid = nn.Sigmoid()
-        else:
-            self.fc2 = nn.Linear(32, 1)
+        self.fc2 = nn.Linear(32, 1)
+        # Note: For classification, we don't apply sigmoid in forward()
+        # We'll use BCEWithLogitsLoss which applies sigmoid internally
     
     def forward(self, x):
         lstm_out, _ = self.lstm(x)
@@ -58,15 +56,12 @@ class LSTMNetwork(nn.Module):
         x = self.dropout(x)
         x = self.fc2(x)
         
-        if self.task == "classification":
-            x = self.sigmoid(x)
-        
         return x.squeeze()
 
 
 class LSTMModel:
     def __init__(self, input_size, hidden_size=64, num_layers=2, dropout=0.2, 
-                 task="regression", learning_rate=0.001, device=None):
+                 task="regression", learning_rate=0.001, pos_weight=None, device=None):
         
         self.task = task
         self.input_size = input_size
@@ -74,6 +69,7 @@ class LSTMModel:
         self.num_layers = num_layers
         self.dropout = dropout
         self.learning_rate = learning_rate
+        self.pos_weight = pos_weight
         
         if device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -89,7 +85,13 @@ class LSTMModel:
         ).to(self.device)
         
         if task == "classification":
-            self.criterion = nn.BCELoss()
+            # Use BCEWithLogitsLoss which combines sigmoid + BCE for numerical stability
+            # and supports pos_weight for handling class imbalance
+            if pos_weight is not None:
+                pos_weight_tensor = torch.tensor([pos_weight], dtype=torch.float32).to(self.device)
+                self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor)
+            else:
+                self.criterion = nn.BCEWithLogitsLoss()
         else:
             self.criterion = nn.MSELoss()
         
@@ -168,6 +170,11 @@ class LSTMModel:
             for sequences, _ in loader:
                 sequences = sequences.to(self.device)
                 outputs = self.model(sequences)
+                
+                if self.task == "classification":
+                    # Apply sigmoid since we removed it from forward()
+                    outputs = torch.sigmoid(outputs)
+                
                 predictions.append(outputs.cpu().numpy())
         
         predictions = np.concatenate(predictions)
@@ -192,6 +199,8 @@ class LSTMModel:
             for sequences, _ in loader:
                 sequences = sequences.to(self.device)
                 outputs = self.model(sequences)
+                # Apply sigmoid to get probabilities
+                outputs = torch.sigmoid(outputs)
                 probabilities.append(outputs.cpu().numpy())
         
         return np.concatenate(probabilities)
@@ -232,7 +241,8 @@ class LSTMModel:
             "num_layers": self.num_layers,
             "dropout": self.dropout,
             "task": self.task,
-            "learning_rate": self.learning_rate
+            "learning_rate": self.learning_rate,
+            "pos_weight": self.pos_weight
         }, save_path)
     
     def load(self, load_path):
@@ -244,6 +254,7 @@ class LSTMModel:
         self.dropout = checkpoint["dropout"]
         self.task = checkpoint["task"]
         self.learning_rate = checkpoint["learning_rate"]
+        self.pos_weight = checkpoint.get("pos_weight", None)  # Backward compatible
         
         self.model = LSTMNetwork(
             input_size=self.input_size,
@@ -252,6 +263,16 @@ class LSTMModel:
             dropout=self.dropout,
             task=self.task
         ).to(self.device)
+        
+        # Recreate criterion with pos_weight if applicable
+        if self.task == "classification":
+            if self.pos_weight is not None:
+                pos_weight_tensor = torch.tensor([self.pos_weight], dtype=torch.float32).to(self.device)
+                self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor)
+            else:
+                self.criterion = nn.BCEWithLogitsLoss()
+        else:
+            self.criterion = nn.MSELoss()
         
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

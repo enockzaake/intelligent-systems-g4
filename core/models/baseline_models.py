@@ -11,11 +11,11 @@ from pathlib import Path
 
 
 class LogisticRegressionModel:
-    def __init__(self, max_iter=1000, random_state=42):
+    def __init__(self, max_iter=1000, random_state=42, class_weight='balanced'):
         self.model = LogisticRegression(
             max_iter=max_iter, 
             random_state=random_state,
-            class_weight='balanced'
+            class_weight=class_weight
         )
         self.trained = False
         
@@ -74,21 +74,26 @@ class LogisticRegressionModel:
 
 
 class RandomForestModel:
-    def __init__(self, task="regression", n_estimators=100, max_depth=None, random_state=42):
+    def __init__(self, task="regression", n_estimators=100, max_depth=None, 
+                 min_samples_split=2, min_samples_leaf=1, class_weight='balanced', random_state=42):
         self.task = task
         
         if task == "classification":
             self.model = RandomForestClassifier(
                 n_estimators=n_estimators,
                 max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
                 random_state=random_state,
-                class_weight='balanced',
+                class_weight=class_weight,
                 n_jobs=-1
             )
         else:
             self.model = RandomForestRegressor(
                 n_estimators=n_estimators,
                 max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
                 random_state=random_state,
                 n_jobs=-1
             )

@@ -34,12 +34,6 @@ def main():
     print("MODEL TRAINING COMPLETE")
     print("=" * 80)
     print(f"\nModel outputs available in: {output_dir.absolute()}")
-    print("\nNext steps:")
-    print("  1. Review evaluation results in outputs/results/")
-    print("  2. Check feature importance plots")
-    print("  3. Compare model performance metrics")
-    print("  4. Run route optimization: python run_optimization.py")
-    print("  5. Start API server: cd api && fastapi dev main.py")
 
 
 if __name__ == "__main__":
