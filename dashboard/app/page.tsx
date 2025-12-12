@@ -19,7 +19,7 @@ import {
 
 export default function Home() {
   const teamMembers = [
-    "Member Name 1",
+    "ENOCK ZAAKE",
     "Member Name 2",
     "Member Name 3",
     "Member Name 4",
@@ -56,46 +56,6 @@ export default function Home() {
               real-time delay prediction, and driver reassignment using machine
               learning and operations research
             </p>
-          </div>
-
-          {/* Key Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-8">
-            <Card>
-              <CardHeader className="text-center">
-                <Truck className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <CardTitle className="text-lg">Route Optimization</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground text-center">
-                  OR-Tools powered optimization for efficient route planning
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="text-center">
-                <Brain className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <CardTitle className="text-lg">AI Predictions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground text-center">
-                  Machine learning models for delay forecasting and risk
-                  analysis
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="text-center">
-                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <CardTitle className="text-lg">Real-time Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground text-center">
-                  Comprehensive dashboards for fleet performance monitoring
-                </p>
-              </CardContent>
-            </Card>
           </div>
 
           {/* CTA Button */}
@@ -152,30 +112,6 @@ export default function Home() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Tech Stack */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">Technology Stack</CardTitle>
-                <CardDescription className="text-center">
-                  Built with modern technologies and frameworks
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <Badge variant="secondary">Next.js 15</Badge>
-                  <Badge variant="secondary">FastAPI</Badge>
-                  <Badge variant="secondary">Python</Badge>
-                  <Badge variant="secondary">TensorFlow</Badge>
-                  <Badge variant="secondary">OR-Tools</Badge>
-                  <Badge variant="secondary">shadcn/ui</Badge>
-                  <Badge variant="secondary">Tailwind CSS</Badge>
-                  <Badge variant="secondary">TypeScript</Badge>
-                  <Badge variant="secondary">Recharts</Badge>
-                  <Badge variant="secondary">scikit-learn</Badge>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Footer */}

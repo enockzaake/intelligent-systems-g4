@@ -29,54 +29,23 @@ import Link from "next/link";
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "Fleet Manager",
+    email: "admin@fleetai.com",
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
     {
-      title: "Overview",
-      url: "/dashboard/overview",
+      title: "Dashboard",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
-      title: "Routes",
-      url: "/dashboard/routes",
-      icon: IconListDetails,
-    },
-    {
-      title: "Drivers",
-      url: "/dashboard/drivers",
-      icon: IconUsers,
-    },
-    {
-      title: "Predictions",
-      url: "/dashboard/predictions",
-      icon: IconChartBar,
-    },
-    {
-      title: "Simulation",
-      url: "/dashboard/simulation-enhanced",
+      title: "Optimization & Scenarios",
+      url: "/dashboard/optimization",
       icon: IconFileAi,
     },
-    {
-      title: "Analytics",
-      url: "/dashboard/analytics",
-      icon: IconDatabase,
-    },
   ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "/dashboard/overview",
-      icon: IconSettings,
-    },
-    {
-      title: "Help",
-      url: "/dashboard/overview",
-      icon: IconHelp,
-    },
-  ],
+  navSecondary: [],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -101,9 +70,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
     </Sidebar>
   );
 }
