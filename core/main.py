@@ -9,7 +9,10 @@ def main():
     print("AI-DRIVEN ROUTE OPTIMIZATION AND DELAY PREDICTION SYSTEM")
     print("=" * 80)
     
-    data_path = Path("data/cleaned_delivery_data.csv")
+    # Use synthetic data by default (better for training)
+    data_path = Path("data/synthetic_delivery_data.csv")
+    if not data_path.exists():
+        data_path = Path("data/cleaned_delivery_data.csv")
     
     if not data_path.exists():
         print(f"\nError: Data file not found at {data_path}")
@@ -24,10 +27,11 @@ def main():
     
     trainer.get_summary_statistics()
     
+    # Train with optimized parameters
     trainer.train_all_models(
-        lstm_epochs=50,
-        lstm_batch_size=64,
-        lstm_sequence_length=10
+        lstm_epochs=100,
+        lstm_batch_size=128,
+        lstm_sequence_length=5
     )
     
     print("\n" + "=" * 80)

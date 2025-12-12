@@ -168,7 +168,7 @@ class ModelTrainer:
         
         return model, metrics
     
-    def train_lstm_classifier(self, sequence_length=10, epochs=50, batch_size=64):
+    def train_lstm_classifier(self, sequence_length=5, epochs=100, batch_size=128):
         print("\n" + "=" * 80)
         print("TRAINING LSTM CLASSIFIER")
         print("=" * 80)
@@ -185,15 +185,29 @@ class ModelTrainer:
         print(f"Train sequences: {train_sequences.shape}")
         print(f"Test sequences: {test_sequences.shape}")
         
+        # Check if sequences were generated
+        if len(train_sequences) == 0 or len(test_sequences) == 0:
+            print("\n⚠️  No sequences generated - skipping LSTM training")
+            print("   This can happen if routes don't have multiple stops")
+            print("   LSTM requires sequential data within routes")
+            return None, None, None
+        
         input_size = train_sequences.shape[2]
+        
+        # Calculate pos_weight for class imbalance
+        y_train = self.data['classification']['y_train']
+        n_class_0 = np.sum(y_train == 0)
+        n_class_1 = np.sum(y_train == 1)
+        pos_weight = (len(y_train) / (2 * n_class_1)) / (len(y_train) / (2 * n_class_0))
         
         model = LSTMModel(
             input_size=input_size,
-            hidden_size=64,
-            num_layers=2,
-            dropout=0.2,
+            hidden_size=128,
+            num_layers=3,
+            dropout=0.3,
             task="classification",
-            learning_rate=0.001
+            learning_rate=0.005,
+            pos_weight=pos_weight
         )
         
         print("\nTraining model...")
@@ -270,23 +284,35 @@ class ModelTrainer:
         
         return model, metrics, history
     
-    def train_all_models(self, lstm_epochs=50, lstm_batch_size=64, lstm_sequence_length=10):
+    def train_all_models(self, lstm_epochs=100, lstm_batch_size=128, lstm_sequence_length=5):
         print("\n" + "=" * 80)
-        print("TRAINING ALL MODELS")
+        print("TRAINING ALL MODELS (OPTIMIZED)")
         print("=" * 80)
         
         if self.data is None:
             self.preprocess_data()
         
+        # Calculate class weights
+        y_train = self.data['classification']['y_train']
+        n_samples = len(y_train)
+        n_class_0 = np.sum(y_train == 0)
+        n_class_1 = np.sum(y_train == 1)
+        weight_0 = n_samples / (2 * n_class_0)
+        weight_1 = n_samples / (2 * n_class_1)
+        pos_weight = weight_1 / weight_0
+        
+        print(f"\n📊 Class Distribution:")
+        print(f"  Class 0: {n_class_0:,} ({n_class_0/n_samples:.2%})")
+        print(f"  Class 1: {n_class_1:,} ({n_class_1/n_samples:.2%})")
+        print(f"  Weight ratio: {pos_weight:.2f}")
+        
+        # Train classification models with class weights
         self.train_logistic_regression()
         self.train_random_forest_classifier()
-        self.train_random_forest_regressor()
+        
+        # Train LSTM with improved settings
+        print("\n🚀 Training LSTM with optimized parameters...")
         self.train_lstm_classifier(
-            sequence_length=lstm_sequence_length,
-            epochs=lstm_epochs,
-            batch_size=lstm_batch_size
-        )
-        self.train_lstm_regressor(
             sequence_length=lstm_sequence_length,
             epochs=lstm_epochs,
             batch_size=lstm_batch_size

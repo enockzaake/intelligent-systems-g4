@@ -91,7 +91,7 @@ class SimulationEngine:
                 
                 modifications["applied_changes"].append({
                     "type": "stop_delay",
-                    "stop_id": int(stop_id),
+                    "stop_id": stop_id,  # Keep original type (string or int)
                     "delay_minutes": delay_minutes,
                     "description": f"Added {delay_minutes} minute delay at stop {stop_id}",
                     "reason": "Simulating unexpected stop delay (customer issue, loading problem, etc.)"
@@ -149,7 +149,7 @@ class SimulationEngine:
                     
                     modifications["applied_changes"].append({
                         "type": "random_delay",
-                        "stop_id": int(modified_df.loc[random_stop, 'stop_id']),
+                        "stop_id": modified_df.loc[random_stop, 'stop_id'],  # Keep original type
                         "delay_minutes": int(delay),
                         "description": f"Random {delay}min delay injected at stop {modified_df.loc[random_stop, 'stop_id']}"
                     })
@@ -160,7 +160,7 @@ class SimulationEngine:
                     
                     modifications["applied_changes"].append({
                         "type": "random_distance_increase",
-                        "stop_id": int(modified_df.loc[random_stop, 'stop_id']),
+                        "stop_id": modified_df.loc[random_stop, 'stop_id'],  # Keep original type
                         "factor": float(factor),
                         "description": f"Distance increased by {factor:.2f}x at stop {modified_df.loc[random_stop, 'stop_id']}"
                     })
@@ -215,8 +215,11 @@ class SimulationEngine:
             # Determine primary reason for delay
             reason = self._determine_delay_reason(row, df)
             
+            # Handle stop_id - keep original type (can be string like 'S8_7' or int)
+            stop_id_val = row['stop_id']
+            
             stop_pred = {
-                "stop_id": int(row['stop_id']),
+                "stop_id": stop_id_val,  # Keep original type (string or int)
                 "route_id": int(row['route_id']),
                 "delay_minutes": float(row['delay_minutes_pred']),
                 "delay_probability": float(row['delay_probability']) if row['delay_probability'] is not None else 0.0,
@@ -399,13 +402,24 @@ class SimulationEngine:
         
         if avg_delay_prob > 0.6:  # High overall delay probability
             current_driver = original_df['driver_id'].iloc[0]
-            # Suggest alternative driver (in production, would use historical performance data)
-            suggested_driver = current_driver + 1
+            
+            # Handle string driver IDs (e.g., "D0391") or numeric IDs
+            if isinstance(current_driver, str):
+                # Extract numeric part and suggest next driver
+                driver_num = current_driver.replace('D', '').replace('d', '')
+                try:
+                    next_num = int(driver_num) + 1
+                    suggested_driver = f"D{next_num:04d}"
+                except ValueError:
+                    suggested_driver = "D0001"  # Fallback
+            else:
+                # Numeric driver ID
+                suggested_driver = int(current_driver) + 1
             
             return {
                 "action": "driver_reassignment",
-                "current_driver": int(current_driver),
-                "suggested_driver": int(suggested_driver),
+                "current_driver": str(current_driver),
+                "suggested_driver": str(suggested_driver),
                 "reason": f"Driver {suggested_driver} has historically better performance under similar conditions",
                 "expected_benefit": "12-15% improvement in on-time delivery"
             }
@@ -422,7 +436,7 @@ class SimulationEngine:
         high_risk = predictions_df[predictions_df['risk_level'] == 'HIGH']
         
         if len(high_risk) > 0:
-            stop_id = int(high_risk.iloc[0]['stop_id'])
+            stop_id = high_risk.iloc[0]['stop_id']  # Keep original type
             
             return {
                 "action": "adjust_time_windows",

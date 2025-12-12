@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 import pandas as pd
 import sys
 from pathlib import Path
@@ -66,11 +66,11 @@ async def startup_event():
 
 class StopData(BaseModel):
     route_id: int
-    driver_id: int
-    stop_id: int
+    driver_id: Union[int, str]  # Accept both int and string (preprocessing will encode)
+    stop_id: Union[int, str]  # Accept both int and string
     address_id: int
     week_id: int
-    country: int
+    country: Union[int, str]  # Accept both int and string (preprocessing will encode)
     day_of_week: str
     indexp: int
     indexa: int
@@ -163,25 +163,38 @@ async def get_sample_data(limit: int = 100):
 async def get_routes_data(limit: int = 50):
     """Get routes data grouped by route_id"""
     try:
-        data_path = Path(__file__).parent.parent / "data" / "cleaned_delivery_data.csv"
+        data_path = Path(__file__).parent.parent / "data" / "synthetic_delivery_data.csv"
+        
+        if not data_path.exists():
+            data_path = Path(__file__).parent.parent / "data" / "cleaned_delivery_data.csv"
         
         if not data_path.exists():
             raise HTTPException(
                 status_code=404,
-                detail=f"Data file not found at {data_path}"
+                detail=f"Data file not found"
             )
         
         df = pd.read_csv(data_path)
         
-        # Get unique routes
+        # Fix negative delays - clamp to 0
+        if 'delay_minutes' in df.columns:
+            df['delay_minutes'] = df['delay_minutes'].clip(lower=0)
+        
+        # Count actual delays (delay_minutes > 0)
+        df['has_delay'] = (df['delay_minutes'] > 0).astype(int)
+        
+        # Get unique routes with more details
         routes = df.groupby('route_id').agg({
             'driver_id': 'first',
             'stop_id': 'count',
             'distancep': 'sum',
-            'day_of_week': 'first'
+            'day_of_week': 'first',
+            'country': 'first',
+            'has_delay': 'sum'
         }).reset_index()
         
-        routes.columns = ['route_id', 'driver_id', 'total_stops', 'total_distance', 'day_of_week']
+        routes.columns = ['route_id', 'driver_id', 'total_stops', 'total_distance', 'day_of_week', 'country', 'total_delays']
+        routes['delay_rate'] = (routes['total_delays'] / routes['total_stops'] * 100).round(1)
         routes = routes.head(limit)
         
         return {
@@ -195,16 +208,330 @@ async def get_routes_data(limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/data/drivers")
-async def get_drivers_data():
-    """Get drivers data grouped by driver_id"""
+@app.get("/data/route/{route_id}")
+async def get_route_details(route_id: int):
+    """Get detailed data for a specific route"""
     try:
-        data_path = Path(__file__).parent.parent / "data" / "cleaned_delivery_data.csv"
+        data_path = Path(__file__).parent.parent / "data" / "synthetic_delivery_data.csv"
+        
+        if not data_path.exists():
+            data_path = Path(__file__).parent.parent / "data" / "cleaned_delivery_data.csv"
         
         if not data_path.exists():
             raise HTTPException(
                 status_code=404,
-                detail=f"Data file not found at {data_path}"
+                detail=f"Data file not found"
+            )
+        
+        df = pd.read_csv(data_path)
+        
+        # Filter by route_id
+        route_df = df[df['route_id'] == route_id].copy()
+        
+        if len(route_df) == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Route {route_id} not found"
+            )
+        
+        # Sort by planned index
+        route_df = route_df.sort_values('indexp')
+        
+        # Calculate route summary - fix negative delays and proper counting
+        # Clamp negative delays to 0 (negative means early arrival, not a delay)
+        route_df['delay_minutes_clamped'] = route_df['delay_minutes'].clip(lower=0)
+        
+        # Count actual delays (delay_flag = 1 AND delay_minutes > 0)
+        actual_delays = ((route_df['delay_flag'] == 1) & (route_df['delay_minutes_clamped'] > 0)).sum()
+        
+        summary = {
+            "route_id": int(route_id),
+            "driver_id": route_df['driver_id'].iloc[0],
+            "country": route_df['country'].iloc[0],
+            "day_of_week": route_df['day_of_week'].iloc[0],
+            "total_stops": len(route_df),
+            "total_distance": float(route_df['distancep'].sum()),
+            "total_delays": int(actual_delays),
+            "delay_rate": float((actual_delays / len(route_df)) * 100) if len(route_df) > 0 else 0.0,
+            "avg_delay_minutes": float(route_df['delay_minutes_clamped'].mean()),
+            "max_delay_minutes": float(route_df['delay_minutes_clamped'].max())
+        }
+        
+        # Get stops data - fix negative delays in stop data
+        stops = route_df.copy()
+        stops['delay_minutes'] = stops['delay_minutes_clamped']
+        stops = stops.drop(columns=['delay_minutes_clamped'])
+        stops = stops.to_dict('records')
+        
+        return {
+            "summary": summary,
+            "stops": stops
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching route details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/data/dataset-structure")
+async def get_dataset_structure():
+    """Get complete dataset structure with parameter descriptions"""
+    
+    # Define all parameters in the dataset
+    parameters = {
+        "raw_data_columns": [
+            {
+                "name": "route_id",
+                "type": "integer",
+                "description": "Unique identifier for each delivery route",
+                "used": True,
+                "usage": "Route grouping, train/test splitting, sequence aggregation"
+            },
+            {
+                "name": "stop_id",
+                "type": "string",
+                "description": "Unique identifier for each stop (format: S{route}_{stop})",
+                "used": True,
+                "usage": "Stop identification, sequence ordering"
+            },
+            {
+                "name": "driver_id",
+                "type": "string",
+                "description": "Driver identifier (format: D{number})",
+                "used": True,
+                "usage": "Encoded as categorical feature for ML models"
+            },
+            {
+                "name": "country",
+                "type": "string",
+                "description": "Country where delivery occurs",
+                "used": True,
+                "usage": "Encoded as categorical feature (regional patterns)"
+            },
+            {
+                "name": "day_of_week",
+                "type": "string",
+                "description": "Day of the week (Monday-Sunday)",
+                "used": True,
+                "usage": "Encoded + weekday_flag feature (weekday vs weekend)"
+            },
+            {
+                "name": "indexp",
+                "type": "integer",
+                "description": "Planned stop index/position in route",
+                "used": True,
+                "usage": "Sequence ordering, stop_deviation calculation"
+            },
+            {
+                "name": "indexa",
+                "type": "integer",
+                "description": "Actual stop index/position executed",
+                "used": True,
+                "usage": "Stop_deviation = indexa - indexp (sequence changes)"
+            },
+            {
+                "name": "distancep",
+                "type": "float",
+                "description": "Planned cumulative distance to stop (km)",
+                "used": True,
+                "usage": "Direct feature + route aggregates + distance_deviation"
+            },
+            {
+                "name": "distancea",
+                "type": "float",
+                "description": "Actual cumulative distance traveled (km)",
+                "used": True,
+                "usage": "Distance_deviation = (distancea - distancep) / distancep"
+            },
+            {
+                "name": "depot",
+                "type": "binary (0/1)",
+                "description": "Whether stop is the depot (starting point)",
+                "used": True,
+                "usage": "Binary feature indicating route start"
+            },
+            {
+                "name": "delivery",
+                "type": "binary (0/1)",
+                "description": "Whether stop is a delivery location",
+                "used": True,
+                "usage": "Binary feature distinguishing deliveries from depot"
+            },
+            {
+                "name": "arrived_time",
+                "type": "time (HH:MM:SS)",
+                "description": "Actual arrival time at stop",
+                "used": True,
+                "usage": "Extracted hour_of_arrival feature, delay calculation"
+            },
+            {
+                "name": "earliest_time",
+                "type": "time (HH:MM:SS)",
+                "description": "Earliest acceptable arrival time (time window start)",
+                "used": True,
+                "usage": "Time_window_length calculation"
+            },
+            {
+                "name": "latest_time",
+                "type": "time (HH:MM:SS)",
+                "description": "Latest acceptable arrival time (time window end)",
+                "used": True,
+                "usage": "Time_window_length + delay detection"
+            },
+            {
+                "name": "actual_arrival_delay",
+                "type": "float",
+                "description": "Normalized delay value (fraction of day)",
+                "used": True,
+                "usage": "Converted to delay_minutes (target variable)"
+            },
+            {
+                "name": "delay_flag",
+                "type": "binary (0/1)",
+                "description": "Binary flag: 1 if delayed, 0 if on-time",
+                "used": True,
+                "usage": "Primary target variable (classification)"
+            },
+            {
+                "name": "delay_minutes",
+                "type": "float",
+                "description": "Delay duration in minutes",
+                "used": True,
+                "usage": "Secondary target variable (regression)"
+            }
+        ],
+        "engineered_features": [
+            {
+                "name": "hour_of_arrival",
+                "type": "integer (0-23)",
+                "description": "Hour extracted from arrived_time",
+                "calculation": "arrived_time.hour",
+                "purpose": "Capture time-of-day patterns (rush hour, off-peak)"
+            },
+            {
+                "name": "time_window_length",
+                "type": "float (minutes)",
+                "description": "Length of acceptable time window",
+                "calculation": "(latest_time - earliest_time) in minutes",
+                "purpose": "Tighter windows = higher delay risk"
+            },
+            {
+                "name": "delay_ratio",
+                "type": "float",
+                "description": "Delay relative to time window",
+                "calculation": "delay_minutes / (time_window_length + epsilon)",
+                "purpose": "Normalized delay severity"
+            },
+            {
+                "name": "weekday_flag",
+                "type": "binary (0/1)",
+                "description": "1 for weekdays, 0 for weekends",
+                "calculation": "Map day_of_week to 1 (Mon-Fri) or 0 (Sat-Sun)",
+                "purpose": "Weekday vs weekend traffic patterns"
+            },
+            {
+                "name": "stop_deviation",
+                "type": "integer",
+                "description": "Difference between actual and planned stop order",
+                "calculation": "indexa - indexp",
+                "purpose": "Captures route reordering (deviation from plan)"
+            },
+            {
+                "name": "distance_deviation",
+                "type": "float (percentage)",
+                "description": "Proportional distance deviation",
+                "calculation": "(distancea - distancep) / (distancep + epsilon)",
+                "purpose": "Captures unexpected detours/route changes"
+            },
+            {
+                "name": "stop_position_norm",
+                "type": "float (0-1)",
+                "description": "Normalized position of stop in route",
+                "calculation": "stop_index / total_stops_in_route",
+                "purpose": "Later stops accumulate delays"
+            },
+            {
+                "name": "prev_stop_delay",
+                "type": "float (minutes)",
+                "description": "Delay at previous stop in same route",
+                "calculation": "delay_minutes.shift(1) by route",
+                "purpose": "Delay propagation modeling"
+            },
+            {
+                "name": "cumulative_delay",
+                "type": "float (minutes)",
+                "description": "Total delay accumulated up to current stop",
+                "calculation": "delay_minutes.cumsum() by route",
+                "purpose": "Cumulative delay impact"
+            },
+            {
+                "name": "route_total_stops",
+                "type": "integer",
+                "description": "Total number of stops in the route",
+                "calculation": "Count stops per route_id",
+                "purpose": "Route complexity indicator"
+            },
+            {
+                "name": "route_avg_distance",
+                "type": "float (km)",
+                "description": "Average distance per stop in route",
+                "calculation": "Mean distancep per route_id",
+                "purpose": "Route density/sparsity"
+            },
+            {
+                "name": "route_total_distance",
+                "type": "float (km)",
+                "description": "Total distance of entire route",
+                "calculation": "Sum distancep per route_id",
+                "purpose": "Overall route length"
+            }
+        ],
+        "target_variables": [
+            {
+                "name": "delayed_flag",
+                "type": "binary (0/1)",
+                "description": "Primary classification target",
+                "usage": "Used by Logistic Regression, Random Forest Classifier, LSTM Classifier",
+                "note": "Predicted by all classification models"
+            },
+            {
+                "name": "delay_minutes",
+                "type": "float",
+                "description": "Regression target (delay duration)",
+                "usage": "Used by Random Forest Regressor, LSTM Regressor",
+                "note": "Predicts actual delay magnitude"
+            }
+        ],
+        "unused_columns": [],
+        "summary": {
+            "total_raw_columns": 17,
+            "used_raw_columns": 17,
+            "unused_raw_columns": 0,
+            "engineered_features": 12,
+            "total_features_for_ml": 29,
+            "categorical_encoded": 3,
+            "note": "All raw data columns are used either directly as features or to engineer new features. No data is wasted."
+        }
+    }
+    
+    return parameters
+
+
+@app.get("/data/drivers")
+async def get_drivers_data():
+    """Get drivers data grouped by driver_id"""
+    try:
+        data_path = Path(__file__).parent.parent / "data" / "synthetic_delivery_data.csv"
+        
+        if not data_path.exists():
+            data_path = Path(__file__).parent.parent / "data" / "cleaned_delivery_data.csv"
+        
+        if not data_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Data file not found"
             )
         
         df = pd.read_csv(data_path)
@@ -604,7 +931,7 @@ class SimulationScenarioRequest(BaseModel):
 
 class StopPrediction(BaseModel):
     """Detailed prediction for a single stop"""
-    stop_id: int
+    stop_id: Union[int, str]  # Can be string like 'S8_7' or int
     route_id: int
     delay_minutes: float
     delay_probability: float
@@ -822,8 +1149,8 @@ async def full_simulation_analysis(request: SimulationScenarioRequest):
         optimization_response = await simulate_and_optimize(request)
         
         return {
-            "predictions": prediction_response.dict(),
-            "optimizations": optimization_response.dict(),
+            "predictions": prediction_response if isinstance(prediction_response, dict) else prediction_response.dict(),
+            "optimizations": optimization_response if isinstance(optimization_response, dict) else optimization_response.dict(),
             "analysis_timestamp": datetime.now().isoformat()
         }
     

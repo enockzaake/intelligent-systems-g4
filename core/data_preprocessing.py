@@ -143,27 +143,44 @@ class DataPreprocessor:
         return train_df, test_df
     
     def prepare_lstm_sequences(self, df, sequence_length=10):
+        """Prepare sequences for LSTM with proper error handling"""
         df = df.sort_values(["route_id", "indexp"]).reset_index(drop=True)
         
         sequences = []
         targets_clf = []
         targets_reg = []
         
-        for route_id in df["route_id"].unique():
-            route_data = df[df["route_id"] == route_id]
+        # Get unique routes
+        unique_routes = df["route_id"].unique()
+        
+        # Process each route
+        for route_id in unique_routes:
+            route_data = df[df["route_id"] == route_id].copy()
             
+            # Skip routes with too few stops
             if len(route_data) < 2:
                 continue
             
+            # Get features - ensure they exist
             feature_cols = [col for col in self.feature_columns if col in route_data.columns]
+            if not feature_cols:
+                continue
+                
             route_features = route_data[feature_cols].values
+            
+            # Get targets
+            if "delayed_flag" not in route_data.columns or "delay_minutes" not in route_data.columns:
+                continue
+                
             route_targets_clf = route_data["delayed_flag"].values
             route_targets_reg = route_data["delay_minutes"].values
             
+            # Create sequences for each stop in the route
             for i in range(len(route_data)):
                 start_idx = max(0, i - sequence_length + 1)
                 seq = route_features[start_idx:i+1]
                 
+                # Pad if necessary
                 if len(seq) < sequence_length:
                     padding = np.zeros((sequence_length - len(seq), seq.shape[1]))
                     seq = np.vstack([padding, seq])
@@ -171,6 +188,12 @@ class DataPreprocessor:
                 sequences.append(seq)
                 targets_clf.append(route_targets_clf[i])
                 targets_reg.append(route_targets_reg[i])
+        
+        # Convert to arrays
+        if len(sequences) == 0:
+            print(f"⚠️  Warning: No sequences generated! Check data structure.")
+            print(f"   Routes: {len(unique_routes)}, Features: {len(self.feature_columns) if self.feature_columns else 0}")
+            return np.array([]), np.array([]), np.array([])
         
         return np.array(sequences), np.array(targets_clf), np.array(targets_reg)
     

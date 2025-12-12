@@ -210,8 +210,28 @@ class RouteOptimizer:
             loc = (row.get('latitude', idx), row.get('longitude', idx * 0.1))
             locations.append(loc)
             
-            earliest = int(row.get('earliest_time', 480) if pd.notna(row.get('earliest_time')) else 480)
-            latest = int(row.get('latest_time', 1200) if pd.notna(row.get('latest_time')) else 1200)
+            # Handle time conversion - can be string (HH:MM:SS) or numeric (minutes)
+            def parse_time_to_minutes(time_val, default):
+                if pd.isna(time_val):
+                    return default
+                if isinstance(time_val, (int, float)):
+                    return int(time_val)
+                if isinstance(time_val, str):
+                    # Try to parse HH:MM:SS or HH:MM format
+                    try:
+                        parts = time_val.split(':')
+                        if len(parts) >= 2:
+                            hours = int(parts[0])
+                            minutes = int(parts[1])
+                            return hours * 60 + minutes
+                        else:
+                            return default
+                    except (ValueError, AttributeError):
+                        return default
+                return default
+            
+            earliest = parse_time_to_minutes(row.get('earliest_time', 480), 480)
+            latest = parse_time_to_minutes(row.get('latest_time', 1200), 1200)
             time_windows.append((earliest, latest))
             stop_ids.append(row.get('stop_id', idx))
         
