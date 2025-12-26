@@ -11,6 +11,7 @@ import {
   IconListDetails,
   IconSettings,
   IconUsers,
+  IconBrain,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -40,9 +41,19 @@ const data = {
       icon: IconDashboard,
     },
     {
+      title: "Route Simulation",
+      url: "/dashboard/route-simulation",
+      icon: IconChartBar,
+    },
+    {
       title: "Optimization & Scenarios",
       url: "/dashboard/optimization",
       icon: IconFileAi,
+    },
+    {
+      title: "DL Route Optimizer (v2)",
+      url: "/dashboard/dl-optimizer",
+      icon: IconBrain,
     },
   ],
   navSecondary: [],

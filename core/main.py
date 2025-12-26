@@ -1,23 +1,44 @@
 import sys
+import argparse
 from pathlib import Path
 
 from train import ModelTrainer
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Train models on delivery dataset')
+    parser.add_argument('--dataset', type=str, 
+                       default='data/improved_delivery_data.csv',
+                       help='Path to training dataset CSV file')
+    
+    args = parser.parse_args()
+    
     print("\n" + "=" * 80)
     print("AI-DRIVEN ROUTE OPTIMIZATION AND DELAY PREDICTION SYSTEM")
     print("=" * 80)
     
-    # Use synthetic data by default (better for training)
-    data_path = Path("data/synthetic_delivery_data.csv")
+    # Use specified dataset or fallback to defaults
+    data_path = Path(args.dataset)
     if not data_path.exists():
-        data_path = Path("data/cleaned_delivery_data.csv")
-    
-    if not data_path.exists():
-        print(f"\nError: Data file not found at {data_path}")
-        print("Please ensure the cleaned data file exists.")
+        # Try fallback options
+        fallback_paths = [
+            Path("data/improved_delivery_data.csv"),
+            Path("data/synthetic_delivery_data.csv"),
+            Path("data/cleaned_delivery_data.csv")
+        ]
+        
+        for fallback in fallback_paths:
+            if fallback.exists():
+                data_path = fallback
+                print(f"\n⚠️  Specified dataset not found. Using: {data_path}")
+                break
+        else:
+            print(f"\n❌ Error: Data file not found at {args.dataset}")
+            print("Please ensure the dataset file exists or generate it first:")
+            print("  python generate_improved_dataset.py")
         sys.exit(1)
+    else:
+        print(f"\n📁 Using dataset: {data_path}")
     
     output_dir = Path("outputs")
     

@@ -47,3 +47,10 @@ print(f"  Avg stops/route: {len(df)/df['route_id'].nunique():.2f}")
 print(f"\n✅ Fixed data saved to: data/synthetic_delivery_data.csv")
 print(f"\n🚀 Now run: python main.py")
 
+
+
+
+
+
+
+

@@ -66,54 +66,6 @@ export default function Home() {
             </Link>
           </Button>
 
-          {/* Team & Professor Section */}
-          <div className="mt-16 w-full max-w-4xl space-y-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Team Members */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-primary" />
-                    <CardTitle>Project Team</CardTitle>
-                  </div>
-                  <CardDescription>Group Members</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {teamMembers.map((member, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-sm font-medium">{member}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Professor */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-primary" />
-                    <CardTitle>Academic Guidance</CardTitle>
-                  </div>
-                  <CardDescription>Under the supervision of</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="font-semibold text-lg">Professor Name</p>
-                    <p className="text-sm text-muted-foreground">
-                      Department of Computer Science
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Deggendorf Institute of Technology, Bhubaneswar
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
           {/* Footer */}
           <div className="mt-16 text-center text-sm text-muted-foreground">
             <p>

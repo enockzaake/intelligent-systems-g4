@@ -46,11 +46,17 @@ class DataPreprocessor:
                 # Fallback to general parsing
                 return pd.to_datetime(series, errors='coerce')
         
-        if 'actual_arrival_delay' in df.columns and 'delay_flag' in df.columns:
+        # Check for pre-computed delay values first (from synthetic data generator)
+        if 'delay_minutes' in df.columns and 'delay_flag' in df.columns:
+            # Use pre-computed values from synthetic data generator
+            df["delay_minutes"] = df["delay_minutes"]
+            df["delayed_flag"] = df["delay_flag"]
+        elif 'actual_arrival_delay' in df.columns and 'delay_flag' in df.columns:
+            # Use values from cleaned original data
             df["delay_minutes"] = np.maximum(0, df["actual_arrival_delay"])
             df["delayed_flag"] = df["delay_flag"]
         else:
-            # Parse time columns safely
+            # Recalculate from time columns (fallback)
             arrived_time = safe_parse_time(df["arrived_time"])
             latest_time = safe_parse_time(df["latest_time"])
             

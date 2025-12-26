@@ -194,11 +194,22 @@ class ModelTrainer:
         
         input_size = train_sequences.shape[2]
         
-        # Calculate pos_weight for class imbalance
-        y_train = self.data['classification']['y_train']
-        n_class_0 = np.sum(y_train == 0)
-        n_class_1 = np.sum(y_train == 1)
-        pos_weight = (len(y_train) / (2 * n_class_1)) / (len(y_train) / (2 * n_class_0))
+        # Calculate pos_weight for class imbalance using sequence targets (not regular targets)
+        # This ensures we use the correct class distribution for LSTM sequences
+        n_class_0 = np.sum(train_targets_clf == 0)
+        n_class_1 = np.sum(train_targets_clf == 1)
+        
+        if n_class_1 == 0:
+            print("⚠️  Warning: No positive samples in LSTM training data!")
+            pos_weight = 1.0
+        else:
+            # Standard balanced weight calculation
+            pos_weight = n_class_0 / n_class_1
+        
+        print(f"\nLSTM Class Distribution:")
+        print(f"  Class 0 (on-time): {n_class_0:,} ({n_class_0/len(train_targets_clf):.2%})")
+        print(f"  Class 1 (delayed): {n_class_1:,} ({n_class_1/len(train_targets_clf):.2%})")
+        print(f"  pos_weight: {pos_weight:.4f}")
         
         model = LSTMModel(
             input_size=input_size,
