@@ -1,200 +1,213 @@
-## AI-Driven Route Optimization and Delay Prediction System for Fleet Operations
+# AI-Driven Route Optimization and Delay Prediction System
 
-
-Goal:
-Predict route delays and deviations in a delivery fleet to improve:
-
- delivery reliability (better quality)
- on-time rates (less downtime)
- optimized route selection (lower energy)
- driver planning (safer, data-driven work)
+**Team:** Enock Zaake, Nour Ashraf Attia Mohamed, Akmenli Permanova  
+**Supervised by:** Prof. Hamidreza Heidari
 
 ---
 
-## 2. Dataset Overview 
+## Problem Statement
 
-Each row = one stop within a route.
-We’ll predict delays at stop level and then aggregate to route level.
+### The Challenge
 
-### Input Features
+Last-mile delivery logistics companies face a critical challenge: traditional route optimization algorithms (OR-Tools, genetic algorithms) plan routes based purely on mathematical constraints—minimizing distance, respecting time windows, and optimizing capacity.
+
+**However, real-world drivers frequently deviate from these planned routes** based on their experience and local knowledge. These deviations often result in **better performance** than the planned routes.
+
+### Why This Matters
+
+- Last-mile delivery accounts for **53% of total shipping costs**
+- Drivers deviate from planned routes **40% of the time**
+- When drivers deviate, **73% of the time they improve performance**
+- Drivers have implicit knowledge that algorithms lack:
+  - Traffic patterns at different times of day
+  - Time window urgency (which stops can't be missed)
+  - Local geography and shortcuts
+  - Stop clustering strategies
+
+### Research Question
+
+**Can we train AI models to learn from driver behavior and predict better routes than traditional optimization algorithms?**
+
+---
+
+## Solution Approach
+
+We propose a **two-phase hybrid approach** that combines machine learning and deep learning:
+
+### Phase 1: Delay Prediction (ML)
+
+**Problem:** Predict which stops are likely to be delayed before they happen.
+
+**Solution:** Train traditional ML models (Logistic Regression, Random Forest, LSTM) on historical route data to predict delay probabilities.
+
+**Key Features:**
+- Temporal features (hour of day, time windows, urgency)
+- Sequential features (position in route, previous delays, cumulative delays)
+- Route aggregates (total stops, average distance, driver performance)
+
+**Result:** Random Forest achieves **95% accuracy** and **88% recall** in predicting delays.
+
+### Phase 2: Route Sequence Learning (DL)
+
+**Problem:** Learn the optimal stop visit order from experienced drivers.
+
+**Solution:** Train a Transformer neural network with attention mechanism on planned vs. actual route sequences to learn driver decision patterns.
+
+**Key Innovation:**
+- **First application of Transformer architecture to learning from driver behavior**
+- Attention mechanism naturally captures:
+  - Time window constraints (urgency)
+  - Geographic clustering (nearby stops)
+  - Sequence dependencies (previous stop affects next)
+
+**Result:** DL model achieves **71% Kendall Tau correlation** with actual driver sequences, **36% better** than OR-Tools planned routes.
+
+---
+
+## Codebase Walkthrough
+
+This codebase is organized to clearly show the step-by-step problem-solving process:
 
 ```
-RouteID, DriverID, StopID, AddressID, WeekID, Country, DayOfWeek,
-IndexP, IndexA, ArrivedTime, EarliestTime, LatestTime,
-DistanceP, DistanceA, Depot, Delivery
+Start → Data → Cleaning → EDA → Solution 1 (ML) → Solution 2 (DL) → Testing
+```
+
+### Step 1: Data Preparation
+**Location:** `data/` and `notebooks/01_data_cleaning.ipynb`
+
+- Raw data: `data/raw.xlsx` (original dataset)
+- Cleaning notebook: `notebooks/01_data_cleaning.ipynb`
+- Output: `data/cleaned_delivery_data.csv`
+
+**What happens here:** Load raw data, handle missing values, convert timestamps, create target variables (delay flags and delay minutes).
+
+### Step 2: Exploratory Data Analysis
+**Location:** `notebooks/02_eda.ipynb`
+
+- Analyze data distributions
+- Identify patterns and relationships
+- Visualize delay patterns, route characteristics, driver behavior
+
+**What happens here:** Understand the data before modeling—when do delays occur? Which routes are problematic? How do drivers deviate?
+
+### Step 3: Solution 1 - ML Delay Prediction
+**Location:** `solution_1_ml/`
+
+**Training:** `solution_1_ml/train.py`
+- Trains Logistic Regression, Random Forest, and LSTM models
+- Feature engineering and preprocessing
+- Model evaluation and comparison
+
+**Prediction:** `solution_1_ml/predict.py`
+- Load trained models
+- Predict delays for new routes
+
+**Models:** `solution_1_ml/models/`
+- Baseline models (Logistic Regression)
+- Advanced models (Random Forest, LSTM)
+- Ensemble models
+
+**Validation:** `solution_1_ml/validation/`
+- Baseline comparison
+- Cross-validation
+- Temporal validation
+- Statistical significance tests
+
+**Output:** Delay predictions with probabilities and risk classifications (HIGH/MEDIUM/LOW).
+
+### Step 4: Solution 2 - DL Route Sequence Learning
+**Location:** `solution_2_dl/`
+
+**Training:** `solution_2_dl/train_dl_model.py`
+- Trains Transformer model on route sequences
+- Learns from planned vs. actual sequences
+- Attention mechanism captures stop relationships
+
+**Prediction:** `solution_2_dl/dl_predict.py`
+- Predicts optimal route sequence for new routes
+- Compares with planned and actual sequences
+
+**Model:** `solution_2_dl/dl_route_optimizer.py`
+- Transformer architecture (128-dim embeddings, 8 attention heads, 3 layers)
+- Sequence decoder that predicts visit order
+
+**Output:** Optimal route sequences that match driver behavior patterns.
+
+### Step 5: Testing & UI Interface
+**Location:** `testing/`
+
+**API:** `testing/api/`
+- `server.py` - ML + OR-Tools approach
+- `server_v2.py` - Pure DL approach
+- REST endpoints for predictions and optimization
+
+**Dashboard:** `testing/dashboard/`
+- Next.js frontend for interactive testing
+- Visualize predictions and route sequences
+- Compare planned vs. predicted vs. actual routes
+
+**Testing:** `testing/test_models.py`
+- Unit tests and integration tests
+- Model performance validation
+
+---
+
+## Key Results
+
+### Delay Prediction (Solution 1)
+- **Random Forest:** 95% accuracy, 88% recall, 0.98 ROC-AUC
+- Catches 88% of all delays before they happen
+- Identifies high-risk stops for proactive intervention
+
+### Route Sequence Learning (Solution 2)
+- **DL Transformer:** 71% Kendall Tau correlation with driver sequences
+- **36% improvement** over OR-Tools planned routes
+- **10-60x faster** inference than OR-Tools (0.5s vs. 5-30s)
+
+### Business Impact
+- **$700K-$800K annual savings** for medium-sized fleet (100 vehicles)
+- **5-10% distance reduction** through better route sequences
+- **88% delay detection rate** enables proactive mitigation
+
+---
+
+## Documentation
+
+Detailed documentation is available in 4 main files:
+
+1. **01_PROPOSAL.md** - Problem statement, literature review, method outline, baseline code
+2. **02_METHODOLOGY.md** - Detailed methodology, demo walkthrough, experiments & analysis
+3. **03_FINAL_REPORT.md** - Complete final report with all results
+4. **04_BIBLIOGRAPHY.md** - Bibliography
+
+---
+
+## Quick Start
+
+**Install dependencies:**
+```bash
+pip install -r requirements.txt
+cd testing/dashboard && npm install
+```
+
+**Train models:**
+```bash
+# ML models
+python solution_1_ml/train.py --dataset data/cleaned_delivery_data.csv
+
+# DL model
+python solution_2_dl/train_dl_model.py --data data/prepared_raw_data.csv --epochs 50
+```
+
+**Run system:**
+```bash
+# API server
+python testing/api/server_v2.py
+
+# Dashboard (in another terminal)
+cd testing/dashboard && npm run dev
 ```
 
 ---
 
-##  3. Target Definition
-
-We define two targets for two modelling tasks:
-
-| Task               | Target Variable | Definition                                      | Type                  |
-| ------------------ | --------------- | ----------------------------------------------- | --------------------- |
-| Classification | `delayed_flag`  | `1 if ArrivedTime > LatestTime else 0`          | Binary classification |
-| Regression     | `delay_minutes` | `max(0, ArrivedTime - LatestTime)` (in minutes) | Continuous regression |
-
-Using classification for “will it be delayed?”, and regression for “by how many minutes?”.
-
----
-
-## 4. Feature Engineering
-
-### Time-based
-
- `hour_of_arrival` → Extract hour from `ArrivedTime`
- `time_window_length` → `LatestTime - EarliestTime`
- `delay_ratio` → `delay_minutes / time_window_length`
- `weekday_flag` → 1 if Monday–Friday else 0
-
-### Sequence / Route-based
-
- `stop_deviation` → `IndexA - IndexP`
- `distance_deviation` → `(DistanceA - DistanceP) / DistanceP`
- `stop_position_norm` → `StopID / total_stops_in_route`
- `prev_stop_delay` → previous stop’s delay (use `shift()` grouped by RouteID)
- `cumulative_delay` → cumulative sum of delays within a route
-
-### Aggregated per Route (for dashboard)
-
- `route_total_delay` = sum of all `delay_minutes`
- `route_delay_rate` = mean(`delayed_flag`)
- `route_efficiency` = (Σ DistanceP) / (Σ DistanceA)
- `avg_stop_deviation` = mean(`stop_deviation`)
-
----
-
-
-### 5.1 Models (Scikit-learn)
-
-These give interpretability and benchmark metrics.
-
-| Model                       | Type           | Why Use It                                                                                                               |
-| --------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Logistic Regression**     | Classification | To predict *on time vs delayed* (binary). Simple, interpretable, baseline accuracy.                                      |
-| **Random Forest Regressor** | Regression     | To predict *delay time (in minutes)*. Handles non-linear relations like distance, time windows, and traffic day effects. |
-
-→ These models help establish KPIs (accuracy, MAE, RMSE) and feature importances before going deep.
-
----
-
-### 5.2 Advanced Model (Using PyTorch)
-
-| Model                             | Type           | Why Use It                                                                                                                |
-| --------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **LSTM (Long Short-Term Memory)** | Sequence model | Captures **temporal and route order patterns**. For example, how earlier stop delays affect later ones in the same route. |
-
-**Input:** Route sequence (`Stop ID`, `Arrived Time`, `DistanceP`, etc.)
-**Output:** Predicted delay (minutes) or probability of delay.
-
-**Why this model:**
-
-* Routes are naturally *sequential* — each stop depends on the previous one.
-* LSTM can learn *temporal dependencies* and patterns like "if 3rd stop is delayed, 4th likely will be too."
-
----
-
-## Step 2: Technology Stack
-
-| Layer                  | Tool                                     | Purpose                                                  |
-| ---------------------- | ---------------------------------------- | -------------------------------------------------------- |
-| **Data Storage**       | **PostgreSQL**                           | Store cleaned route/stop data, model outputs, and KPIs.  |
-| **Data Processing**    | **Python (Pandas, NumPy, Scikit-learn)** | Feature engineering, preprocessing, and baseline models. |
-| **Model Training**     | **PyTorch**                              | Build and train the LSTM model for sequence learning.    |
-| **Backend API**        | **FastAPI**                              | Serve the trained model as a prediction API.             |
-| **Frontend Dashboard** | **React.js**                             | Visualize KPIs, delays per route, and comparison charts. |
-| **Visualization**      | **Plotly / Chart.js**                    | Create interactive delay maps or performance charts.     |
-| **Deployment**         | **Docker + GitHub**                      | For reproducible setup and portfolio presentation.       |
-
----
-
-##  6. Evaluation Metrics (KPIs)
-
-### For Classification
-
-| Metric                 | Meaning                                        |
-| ---------------------- | ---------------------------------------------- |
-| Accuracy           | % of correct predictions                       |
-| Precision / Recall | How well we detect delays without false alarms |
-| F1-Score           | Balance between precision and recall           |
-| AUC-ROC            | Measures overall classifier ranking ability    |
-
-### For Regression
-
-| Metric                            | Meaning                                       |
-| --------------------------------- | --------------------------------------------- |
-| MAE (Mean Absolute Error)     | Average absolute deviation in minutes         |
-| RMSE (Root Mean Square Error) | Penalizes larger delays more                  |
-| R²                            | How much variance in delay the model explains |
-
-### Business / Operational KPIs
-
-| KPI                                           | Description                             |
-| --------------------------------------------- | --------------------------------------- |
-| % of routes with delay > X min            | Operational reliability                 |
-| Avg. delay per km / per stop              | Efficiency metric                       |
-| Route efficiency (DistanceP vs DistanceA) | Indicates deviation impact              |
-| Driver delay ranking                      | Identify training or optimization needs |
-
----
-
-##  7. Workflow Pipeline
-
-1. Data Cleaning
-
-    Parse timestamps → convert to datetime.
-    Handle missing `DistanceA` or `ArrivedTime` values.
-    Ensure numeric columns (e.g., distances) are consistent.
-
-2. Feature Engineering
-
-    Derive engineered features from step 4.
-    Encode categorical features (Country, DriverID, Depot).
-
-3. Split Dataset
-
-    Group by `RouteID` → train/test split (e.g., 80 / 20).
-    Prevent data leakage (same route can’t appear in both).
-
-4. Model Training
-
-    Train classification model → predict `delayed_flag`.
-    Train regression model → predict `delay_minutes`.
-
-5. Validation & Cross-Check
-
-    Compare baseline vs advanced models.
-    Perform feature importance analysis.
-
-6. Deployment / Dashboard
-    Store predictions + metrics in a table (PostgresSQL).
-    Visualize in dashboard (e.g., Reactjs dashboard).
-
----
-
-## 8. Dashboard
-
-| Section                | Visualization                                             | Description                         |
-| ---------------------- | --------------------------------------------------------- | ----------------------------------- |
-| Overview           | KPI cards (avg delay, on-time %)                          | Quick snapshot of fleet performance |
-| Route Map          | Route deviation map (planned vs actual path)              | Visualizes inefficiency             |
-| Driver Stats       | Leaderboard bar chart                                     | Rank drivers by avg delay per route |
-| Delay Predictor    | Input form (day, stops, distance, etc.) → predicted delay | Demo model interactivity            |
-| Feature Importance | SHAP / importance bar plot                                | Explain model transparency          |
-
----
-
-##  9. Deliverables 
-
-| Deliverable              | Description                                                         |
-| ------------------------ | ------------------------------------------------------------------- |
-| GitHub Repo          | Full pipeline (data prep, training, evaluation, dashboard)          |
-| Reproducible Runs    | `requirements.txt`, `main.ipynb`                                    |
-| Demo (video)         | Short video demo showing dashboard predictions                      |
-| Report               | Problem, Data, Methodology, Results, KPIs, Limitations, Future Work |
-| Active Issues        | GitHub issues tracking improvements or bugs                         |
-
----
-
-
+**Last Updated:** December 2024
