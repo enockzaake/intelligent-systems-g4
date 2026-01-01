@@ -165,7 +165,7 @@ Start → Data → Cleaning → EDA → Solution 1 (ML) → Solution 2 (DL) → 
 - **10-60x faster** inference than OR-Tools (0.5s vs. 5-30s)
 
 ### Business Impact
-- **$700K-$800K annual savings** for medium-sized fleet (100 vehicles)
+- **Significant operational improvements** for medium-sized fleet (100 vehicles)
 - **5-10% distance reduction** through better route sequences
 - **88% delay detection rate** enables proactive mitigation
 
@@ -173,12 +173,13 @@ Start → Data → Cleaning → EDA → Solution 1 (ML) → Solution 2 (DL) → 
 
 ## Documentation
 
-Detailed documentation is available in 4 main files:
+Detailed documentation is available in 5 main files:
 
 1. **01_PROPOSAL.md** - Problem statement, literature review, method outline, baseline code
-2. **02_METHODOLOGY.md** - Detailed methodology, demo walkthrough, experiments & analysis
-3. **03_FINAL_REPORT.md** - Complete final report with all results
-4. **04_BIBLIOGRAPHY.md** - Bibliography
+2. **02_METHODOLOGY.md** - Detailed step-by-step methodology and implementation
+3. **05_DEMO_EXPERIMENTS_ANALYSIS.md** - Demo scenarios, experimental results, and detailed analysis
+4. **03_FINAL_REPORT.md** - Complete final report with all results
+5. **04_BIBLIOGRAPHY.md** - Bibliography
 
 ---
 
@@ -210,4 +211,4 @@ cd testing/dashboard && npm run dev
 
 ---
 
-**Last Updated:** December 2024
+

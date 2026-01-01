@@ -485,5 +485,3 @@ For complete bibliography, see `04_BIBLIOGRAPHY.md`
 3. Psaraftis, H. N., et al. (2016). "Dynamic vehicle routing problems: Three decades and counting." *Networks*.
 
 ---
-
-**Last Updated:** December 2024

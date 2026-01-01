@@ -302,93 +302,14 @@ python solution_1_ml/validation/comprehensive_validation.py
 
 ---
 
-## Experimental Results
+## Summary of Results
 
-### ML Delay Prediction Results
+For detailed experimental results, analysis, and demonstration scenarios, see `05_DEMO_EXPERIMENTS_ANALYSIS.md`.
 
-| Model | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
-|-------|----------|-----------|--------|----------|---------|
-| Majority Class (Baseline) | 90.3% | 0.0% | 0.0% | 0.0% | 0.500 |
-| Route Mean | 74.2% | 18.5% | 62.1% | 28.4% | 0.712 |
-| Logistic Regression | 78.5% | 28.6% | 79.6% | 42.1% | 0.872 |
-| **Random Forest** | **94.8%** | **68.1%** | **88.2%** | **76.8%** | **0.982** |
-| LSTM | 65.7% | 17.5% | 66.7% | 27.7% | 0.719 |
-
-**Key Finding:** Random Forest is the clear winner, achieving 95% accuracy and 88% recall.
-
-### DL Route Sequence Results
-
-| Metric | OR-Tools (Planned) | DL Transformer | Improvement |
-|--------|-------------------|----------------|-------------|
-| Kendall Tau | 0.523 | **0.712** | **+36%** |
-| Spearman ρ | 0.587 | **0.748** | **+27%** |
-| Sequence Accuracy | 31.2% | **48.9%** | **+57%** |
-| Edit Distance | 8.3 swaps | **6.1 swaps** | **-26%** |
-
-**Key Finding:** DL model significantly outperforms traditional OR-Tools optimization.
-
-### Cross-Validation Results
-
-**Random Forest (5-fold CV):**
-- Accuracy: 94.8% ± 0.2%
-- Recall: 88.1% ± 0.5%
-- F1-Score: 76.7% ± 0.5%
-- ROC-AUC: 0.982 ± 0.002
-
-**Interpretation:** Very low variance across folds → model is stable and reliable.
-
-### Temporal Validation Results
-
-**Train on Weeks 1-3, Test on Week 4:**
-- Random Forest: 93.9% accuracy, 86.5% recall
-- Performance drop: Only 0.9% (excellent generalization)
-
-**Interpretation:** Model generalizes well to future routes.
-
-### Statistical Significance
-
-**McNemar's Test (Random Forest vs. Logistic Regression):**
-- P-value: < 0.001
-- Conclusion: Random Forest is significantly better
-
-**Paired T-Test (DL vs. Planned Kendall Tau):**
-- T-statistic: 12.47
-- P-value: < 0.001
-- Conclusion: DL model is significantly better than planned routes
-
----
-
-## Key Insights & Findings
-
-### What We Learned
-
-1. **Drivers are smarter than algorithms**
-   - 40% deviation rate, 73% improve performance
-   - Implicit knowledge (traffic, geography, urgency) can be learned
-
-2. **Traditional ML excels at delay prediction**
-   - Random Forest beats LSTM
-   - Feature engineering > model complexity
-   - 95% accuracy achievable with proper features
-
-3. **Deep learning captures routing logic**
-   - Transformer learns driver strategies naturally
-   - Attention mechanism captures time windows, clustering, dependencies
-   - 36% improvement over OR-Tools
-
-4. **Hybrid approach is optimal**
-   - Phase 1 (ML): Identify problematic stops
-   - Phase 2 (DL): Optimize entire sequence
-   - Combined system leverages strengths of both
-
-### Business Impact
-
-**For medium-sized fleet (100 vehicles):**
-- Delay reduction: $577,500/year
-- Route efficiency: $93,750-$187,500/year
-- Driver productivity: $62,500/year
-- **Total: $733,750-$827,500/year**
-- **ROI: 734% first year**
+**Key Results:**
+- **ML Delay Prediction:** Random Forest achieves 94.8% accuracy and 88.2% recall
+- **DL Route Sequence:** Transformer achieves 0.712 Kendall Tau (36% improvement over OR-Tools)
+- **Combined System:** 80% delay reduction, 5-10% route efficiency improvement
 
 ---
 
@@ -432,4 +353,4 @@ The results show that learning from driver behavior significantly outperforms tr
 
 ---
 
-**Last Updated:** December 2024
+
