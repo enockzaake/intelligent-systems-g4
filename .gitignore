@@ -11,3 +11,6 @@
 *.log.xz
 *.log.lzma
 *.log.zstd
+
+
+outputs/presentation/

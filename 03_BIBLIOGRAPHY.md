@@ -1,4 +1,4 @@
-# Bibliography (15-20 pages)
+# Bibliography
 
 ---
 

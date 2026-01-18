@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Brain, TrendingUp, Target, CheckCircle2, XCircle, ArrowRight } from "lucide-react"
+import { MOCK_OPTIMIZED_ROUTE, MOCK_ROUTES } from "@/lib/mock-data"
 
 interface Stop {
   stop_id: string
@@ -71,7 +72,7 @@ const API_BASE_URL = "http://localhost:8001"
 
 export default function DLOptimizerPage() {
   const [routes, setRoutes] = useState<RouteInfo[]>([])
-  const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null)
+  const [selectedRouteId, setSelectedRouteId] = useState<number | 0>(12345)
   const [selectedRoute, setSelectedRoute] = useState<RouteInfo | null>(null)
   const [prediction, setPrediction] = useState<PredictionResult | null>(null)
   const [vizData, setVizData] = useState<VisualizationData | null>(null)
@@ -96,6 +97,12 @@ export default function DLOptimizerPage() {
   }
 
   const loadRandomRoutes = async () => {
+    // Use mock data if API is offline
+    if (apiStatus === 'offline') {
+      setRoutes(MOCK_ROUTES as any)
+      return
+    }
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/v2/random-routes?count=20`)
       const data = await response.json()
@@ -112,6 +119,15 @@ export default function DLOptimizerPage() {
     setPrediction(null)
     setVizData(null)
     
+    // Use mock data if API is offline
+    if (apiStatus === 'offline') {
+      const mockRoute = MOCK_ROUTES.find(r => r.route_id === id)
+      if (mockRoute) {
+        setSelectedRoute(mockRoute as any)
+      }
+      return
+    }
+    
     // Load route details
     try {
       const response = await fetch(`${API_BASE_URL}/api/v2/route/${id}`)
@@ -127,6 +143,42 @@ export default function DLOptimizerPage() {
 
     setLoading(true)
     setError(null)
+
+    // Use mock data if API is offline
+    if (apiStatus === 'offline') {
+      // Simulate loading delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Use mock data
+      const mockPrediction = {
+        route_id: MOCK_OPTIMIZED_ROUTE.route_id,
+        num_stops: MOCK_OPTIMIZED_ROUTE.route_info.num_stops,
+        predicted_sequence: MOCK_OPTIMIZED_ROUTE.sequences.predicted,
+        planned_sequence: MOCK_OPTIMIZED_ROUTE.sequences.planned,
+        actual_sequence: MOCK_OPTIMIZED_ROUTE.sequences.actual,
+        stop_ids: MOCK_OPTIMIZED_ROUTE.stops.map(s => s.stop_id),
+        confidence_scores: MOCK_OPTIMIZED_ROUTE.stops.map(s => s.confidence),
+        metrics: MOCK_OPTIMIZED_ROUTE.metrics
+      }
+      
+      const mockVizData = {
+        route_id: MOCK_OPTIMIZED_ROUTE.route_id,
+        num_stops: MOCK_OPTIMIZED_ROUTE.route_info.num_stops,
+        stops: MOCK_OPTIMIZED_ROUTE.stops,
+        metrics: {
+          sequence_accuracy: MOCK_OPTIMIZED_ROUTE.metrics.sequence_accuracy,
+          kendall_tau_predicted: MOCK_OPTIMIZED_ROUTE.metrics.kendall_tau_predicted,
+          kendall_tau_planned: MOCK_OPTIMIZED_ROUTE.metrics.kendall_tau_planned,
+          improvement: MOCK_OPTIMIZED_ROUTE.metrics.improvement_over_planned
+        },
+        sequences: MOCK_OPTIMIZED_ROUTE.sequences
+      }
+      
+      setPrediction(mockPrediction as any)
+      setVizData(mockVizData as any)
+      setLoading(false)
+      return
+    }
 
     try {
       // Get prediction
@@ -183,9 +235,10 @@ export default function DLOptimizerPage() {
 
       {/* API Status Alert */}
       {apiStatus === 'offline' && (
-        <Alert variant="destructive">
+        <Alert>
           <AlertDescription>
-            The DL model is not loaded. Please train the model first using: <code>python core/train_dl_model.py</code>
+            <strong>Demo Mode:</strong> Using mock data for demonstration. The DL model is not loaded. 
+            You can still view example predictions and optimized routes below.
           </AlertDescription>
         </Alert>
       )}
@@ -244,7 +297,7 @@ export default function DLOptimizerPage() {
 
           <Button 
             onClick={handlePredict} 
-            disabled={!selectedRouteId || loading || apiStatus !== 'online'}
+            disabled={!selectedRouteId || loading}
             className="w-full"
           >
             {loading ? (

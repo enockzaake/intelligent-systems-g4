@@ -136,4 +136,3 @@ export function generateRouteData(count: number = 10) {
     avg_delay_minutes: Math.random() * 20,
   }));
 }
-

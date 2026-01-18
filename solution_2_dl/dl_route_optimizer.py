@@ -160,10 +160,7 @@ class RouteSequenceDataset(Dataset):
 
 
 class RouteOptimizerTransformer(nn.Module):
-    """
-    Transformer-based model for learning optimal route sequences.
-    Uses attention mechanism to predict stop visit order.
-    """
+
     
     def __init__(
         self,
